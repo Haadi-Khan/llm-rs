@@ -26,17 +26,17 @@ impl super::Layer for TransformerBlock {
         let norm1_out = self.norm1.normalize(&attention_out);
         
         let ff_out = self.feed_forward.forward(&norm1_out);
-        let norm2_out = self.norm2.normalize(&ff_out);
         
-        norm2_out
+        
+        self.norm2.normalize(&ff_out)
     }
     
     fn backward(&mut self, grads: &Array2<f32>, lr: f32) -> Array2<f32> {
         let grad_norm2 = self.norm2.backward(grads, lr);
         let grad_ffn = self.feed_forward.backward(&grad_norm2, lr);
         let grad_norm1 = self.norm1.backward(&grad_ffn, lr);
-        let grad_attn = self.attention.backward(&grad_norm1, lr);
+        
 
-        grad_attn
+        self.attention.backward(&grad_norm1, lr)
     }   
 }

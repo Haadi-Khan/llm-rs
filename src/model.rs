@@ -1,8 +1,8 @@
 use crate::layers::Layer;
 use crate::layers::{
-    LayerType, embed::Embed, project::OutputProjection, transformer::TransformerBlock,
+    LayerType, project::OutputProjection, transformer::TransformerBlock,
 };
-use crate::token::{Token, Vocab};
+use crate::token::Vocab;
 use crate::util::constants as consts;
 use ndarray::Array1;
 use ndarray::{Array2, Axis};
@@ -21,9 +21,9 @@ impl Default for LLM {
         Self {
             vocab: Vocab::default(),
             network: vec![
-                LayerType::Embed(Embed::default()),
-                LayerType::TransformerBlock(transformer_block),
-                LayerType::OutputProjection(output_projection),
+                LayerType::Embed(Box::default()),
+                LayerType::TransformerBlock(Box::new(transformer_block)),
+                LayerType::OutputProjection(Box::new(output_projection)),
             ],
         }
     }

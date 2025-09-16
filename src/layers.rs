@@ -19,12 +19,12 @@ pub trait Layer {
 
 #[derive(Debug, Clone)]
 pub enum LayerType {
-    SelfAttention(SelfAttention),
-    FeedForward(FeedForward),
-    Embed(Embed),
-    LayerNorm(LayerNorm),
-    TransformerBlock(TransformerBlock),
-    OutputProjection(OutputProjection),
+    SelfAttention(Box<SelfAttention>),
+    FeedForward(Box<FeedForward>),
+    Embed(Box<Embed>),
+    LayerNorm(Box<LayerNorm>),
+    TransformerBlock(Box<TransformerBlock>),
+    OutputProjection(Box<OutputProjection>),
 }
 
 impl Layer for LayerType {

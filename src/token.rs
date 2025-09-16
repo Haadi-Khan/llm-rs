@@ -1,14 +1,8 @@
+#[derive(Default)]
 pub struct Token {
 
 }
 
-impl Default for Token {
-    fn default() -> Self {
-        Token {
-
-        }
-    }
-}
 
 use std::collections::HashMap;
 #[derive(Clone)]
