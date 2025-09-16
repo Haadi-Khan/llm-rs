@@ -1,3 +1,11 @@
+//! Feedforward Neural Network Layer
+//!
+//! This layer consists of two linear transformations with a ReLU activation in between.
+//! The output is added to the input (residual connection).
+//! The weights are initialized using Xavier/He initialization.
+//! The layer supports backpropagation and uses the Adam optimizer for weight updates.
+//!
+
 use crate::optim::Adam;
 use ndarray::Array2;
 use ndarray::Axis;

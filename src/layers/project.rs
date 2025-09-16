@@ -1,3 +1,9 @@
+//! Output projection layer
+//!
+//! This layer maps the model's embedding space to the vocabulary space for generating logits.
+//! It consists of a weight matrix and a bias vector, both initialized appropriately.
+//! The layer supports backpropagation and uses the Adam optimizer for updating the weights and biases.
+
 use ndarray::{Array2, Axis};
 use rand_distr::{Distribution, Normal};
 

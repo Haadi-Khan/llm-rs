@@ -1,3 +1,10 @@
+//! Layers for the transformer architecture.
+//!
+//! Provides a modular implementation of various layers used in transformer models,
+//! including self-attention, feed-forward networks, embedding layers, layer normalization,
+//! and output projection. Each layer supports forward and backward passes for training.
+//!
+
 pub mod attention;
 pub mod embed;
 pub mod ffn;

@@ -1,4 +1,12 @@
-//! The attention mechanism with RoPE (Rotary Position Embedding).
+//! Transformer Self-Attention Layer with RoPE
+//!
+//! This module implements the classic self-attention mechanism used in
+//! Transformers, and uses RoPE (Rotary Positional Embeddings) for positional
+//! encoding.
+//!
+//! Reference Papers:
+//! - ["Attention is All You Need" (Vaswani et al., 2017)](https://arxiv.org/abs/1706.03762)
+//! - ["RoFormer: Enhanced Transformer with Rotary Position Embedding" (Su et al., 2021)](https://arxiv.org/abs/2104.09864)
 
 use super::embed::RotaryEmbedding;
 use crate::optim::Adam;

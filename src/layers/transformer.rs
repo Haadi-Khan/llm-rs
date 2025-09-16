@@ -1,3 +1,11 @@
+//! Transformer Block Layer
+//!
+//! This module implements a Transformer block layer, which consists of a self-attention
+//! mechanism followed by a feedforward neural network (FFN). Each sub-layer is
+//! followed by layer normalization. The block supports backpropagation and uses
+//! the Adam optimizer for updating the weights.
+//!
+
 use super::{attention::SelfAttention, ffn::FeedForward, layernorm::LayerNorm};
 use ndarray::Array2;
 

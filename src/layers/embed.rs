@@ -1,5 +1,12 @@
-//! The first step in the transformer pipeline. Transform all the input tokens
-//! into our embedding space. This is our word2vec and RoPE step.
+//! Transformer Embedding Layer
+//!
+//! Embedding is the first step in the transformer architecture. It converts the
+//! input into a dense vector representation. It uses token embeddings and
+//! positional encoding.
+//!
+//! References:
+//! - ["RoFormer: Enhanced Transformer with Rotary Position Embedding" (Su et al., 2021)](https://arxiv.org/abs/2104.09864)
+//!
 
 use ndarray::{Array1, Array2, s};
 use rand::Rng;

@@ -1,3 +1,10 @@
+//! LayerNorm layer
+//!
+//! This module implements Layer Normalization, which normalizes the inputs across the features for each data point.
+//! It includes learnable parameters (gamma and beta) for scaling and shifting the normalized output.
+//! The layer supports backpropagation and uses the Adam optimizer for updating the parameters.
+//!
+
 use crate::optim::Adam;
 use ndarray::Array2;
 use ndarray::Axis;
