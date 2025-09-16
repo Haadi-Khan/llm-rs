@@ -1,6 +1,7 @@
 //! The attention mechanism with RoPE (Rotary Position Embedding).
 
-use crate::{embed::RotaryEmbedding, optim::Adam};
+use crate::{optim::Adam};
+use super::embed::RotaryEmbedding;
 use ndarray::Array2;
 use rand_distr::{Distribution, Normal};
 

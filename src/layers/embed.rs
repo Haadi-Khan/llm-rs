@@ -4,11 +4,15 @@
 use ndarray::{s, Array1, Array2};
 use rand::Rng;
 
-use crate::util::constants as consts;
+use crate::{optim::Adam, token::Vocab, util::constants as consts};
 
+#[derive(Debug, Clone)]
 pub struct Embed {
     pub token: Array2<f32>,
     pub position: Array2<f32>,
+    pub cached_input: Option<Array2<f32>>,
+    pub token_optimizer: Adam,
+    pub positional_optimizer: Adam,
 }
 
 impl Default for Embed { 
@@ -16,6 +20,10 @@ impl Default for Embed {
         Self { 
             token: Self::init_embeddings(consts::VOCAB_SIZE, consts::EMBEDDING_DIM),
             position: Self::init_positional_embeddings(consts::MAX_SEQ_LEN, consts::EMBEDDING_DIM),
+            cached_input: None,
+            token_optimizer: Adam::new((Vocab::default_words().len(), consts::EMBEDDING_DIM)),
+            positional_optimizer: Adam::new((consts::MAX_SEQ_LEN, consts::EMBEDDING_DIM))
+
          }
     }
 }
@@ -24,6 +32,7 @@ impl Embed {
     fn init_embeddings(vocab_size: usize, embedding_dim: usize) -> Array2<f32> {
         let mut rng = rand::rng();
         Array2::from_shape_fn((vocab_size, embedding_dim), |_| rng.random_range(-1.0..1.0))
+
     }
 
     fn init_positional_embeddings(max_seq_len: usize, embedding_dim: usize) -> Array2<f32> {
@@ -54,7 +63,51 @@ impl Embed {
     }
 }
 
+impl super::Layer for Embed {
+    fn forward(&mut self, input: &Array2<f32>) -> Array2<f32> { // input shape is [1, sequence_length]
+        self.cached_input = Some(input.clone());
+        let token_ids: Vec<usize> = input.iter().map(|&x| x as usize).collect();
+        self.embed_tokens(&token_ids) // shape is [sequence_length, embedding_dim]
+    }
+
+    fn backward(&mut self, grads: &Array2<f32>, lr: f32) -> Array2<f32> {
+        let input = self.cached_input.as_ref().unwrap();
+        let token_ids: Vec<usize> = input.iter().map(|&x| x as usize).collect();
+        let grads = grads.view(); // (sequence_length, embedding_dim)
+
+        // Initialize gradients for embeddings
+        let mut token_grads = Array2::zeros(self.token.dim());
+        let mut positional_grads = Array2::zeros(self.position.dim());
+
+        for (i, &token_id) in token_ids.iter().enumerate() {
+            if token_id >= self.token.nrows() {
+                panic!("Token ID {} out of bounds for vocab size {}", token_id, self.token.nrows());
+            }
+            let grad_row = grads.row(i);
+
+            // Accumulate token embedding gradients efficiently (no temp variable)
+            {
+                let mut token_row = token_grads.row_mut(token_id);
+                token_row += &grad_row;
+            }
+
+            // Accumulate positional embedding gradients efficiently (no temp variable)
+            {
+                let mut pos_row = positional_grads.row_mut(i);
+                pos_row += &grad_row;
+            }
+        }
+
+        self.token_optimizer.step(&mut self.token, &token_grads, lr);
+        self.positional_optimizer.step(&mut self.position, &positional_grads, lr);
+
+        // Return gradient to propagate further back
+        grads.to_owned()
+    }
+}
+
 /// Rotary Position Embedding (RoPE) implementation
+#[derive(Debug, Clone)]
 pub struct RotaryEmbedding {
     head_dim: usize,
     inv_freq: Array1<f32>,

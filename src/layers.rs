@@ -2,13 +2,14 @@ pub mod attention;
 pub mod embed;
 pub mod ffn;
 pub mod layernorm;
-pub mod transformer;
 pub mod project;
+pub mod transformer;
 
 use ndarray::Array2;
 
 use crate::layers::{
-    attention::SelfAttention, embed::Embed, ffn::FeedForward, layernorm::LayerNorm, project::OutputProjection, transformer::TransformerBlock
+    attention::SelfAttention, embed::Embed, ffn::FeedForward, layernorm::LayerNorm,
+    project::OutputProjection, transformer::TransformerBlock,
 };
 
 pub trait Layer {

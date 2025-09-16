@@ -1,5 +1,6 @@
-use crate::embed::Embed;
-use crate::layers::{LayerType, project::OutputProjection, transformer::TransformerBlock};
+use crate::layers::{
+    LayerType, embed::Embed, project::OutputProjection, transformer::TransformerBlock,
+};
 use crate::token::{Token, Vocab};
 use crate::util::constants as consts;
 use ndarray::Array1;
@@ -19,9 +20,9 @@ impl Default for LLM {
         Self {
             vocab: Token::default(),
             network: vec![
-                Vocab::default(),
-                transformer_block,
-                output_projection,
+                LayerType::Embed(Embed::default()),
+                LayerType::TransformerBlock(transformer_block),
+                LayerType::OutputProjection(output_projection),
             ],
         }
     }
@@ -39,6 +40,7 @@ impl LLM {
         for (i, layer) in self.network.iter().enumerate() {
             let layer_type = match layer {
                 LayerType::SelfAttention(_) => "SelfAttention",
+                LayerType::Embed(_) => "Embed",
                 LayerType::FeedForward(_) => "FeedForward",
                 LayerType::LayerNorm(_) => "LayerNorm",
                 LayerType::TransformerBlock(_) => "TransformerBlock",
