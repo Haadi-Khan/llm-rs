@@ -1,6 +1,3 @@
-#[derive(Default)]
-pub struct Token {}
-
 use std::collections::HashMap;
 #[derive(Clone)]
 pub struct Vocab {

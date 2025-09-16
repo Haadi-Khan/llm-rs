@@ -1,9 +1,17 @@
-[package]
+[workspace]
+members = [
+    "tokenizer",
+    "model",
+    "train",
+    "client"
+]
+
+[workspace.package]
 name = "llm"
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
+[workspace.dependencies]
 ndarray = "0.16.1"
 rand = "0.9.2"
 rand_distr = "0.5.1"
