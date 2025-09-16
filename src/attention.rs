@@ -1,6 +1,6 @@
-//! The attention mechanism. 
+//! The attention mechanism with RoPE (Rotary Position Embedding).
 
-use crate::optim::Adam;
+use crate::{embed::RotaryEmbedding, optim::Adam};
 use crate::transformer::Layer;
 use ndarray::Array2;
 use rand_distr::{Distribution, Normal};
@@ -10,9 +10,12 @@ use std::f32;
 
 pub struct SelfAttention {
     pub embed_dim: usize,
+    #[allow(dead_code)]
+    head_dim: usize,
     w_q: Array2<f32>,
     w_k: Array2<f32>,
     w_v: Array2<f32>,
+    rope: RotaryEmbedding,
 
     cached_input: Option<Array2<f32>>,
 
@@ -30,6 +33,7 @@ impl Default for SelfAttention {
 impl SelfAttention {
     pub fn new(embedding_dim: usize) -> Self {
         let mut rng = rand::rng();
+        let head_dim = embedding_dim; // For single-head attention, head_dim = embedding_dim
 
         // Xavier/He initialization: std = sqrt(2 / fan_in)
         let std = (2.0 / embedding_dim as f32).sqrt();
@@ -37,9 +41,11 @@ impl SelfAttention {
 
         SelfAttention {
             embed_dim: embedding_dim,
+            head_dim,
             w_q: Array2::from_shape_fn((embedding_dim, embedding_dim), |_| normal.sample(&mut rng)),
             w_k: Array2::from_shape_fn((embedding_dim, embedding_dim), |_| normal.sample(&mut rng)),
             w_v: Array2::from_shape_fn((embedding_dim, embedding_dim), |_| normal.sample(&mut rng)),
+            rope: RotaryEmbedding::new(head_dim),
             cached_input: None,
             optimizer_w_q: Adam::new((embedding_dim, embedding_dim)),
             optimizer_w_k: Adam::new((embedding_dim, embedding_dim)),
@@ -51,7 +57,11 @@ impl SelfAttention {
         let q = input.dot(&self.w_q);
         let k = input.dot(&self.w_k);
         let v = input.dot(&self.w_v);
-        (q, k, v)
+        
+        // Apply RoPE to Q and K
+        let (q_rope, k_rope) = self.rope.apply_qk(&q, &k);
+        
+        (q_rope, k_rope, v)
     }
 
     fn attention(&self, q: &Array2<f32>, k: &Array2<f32>, v: &Array2<f32>) -> Array2<f32> {
@@ -132,9 +142,15 @@ impl Layer for SelfAttention {
 
     fn backward(&mut self, grads: &Array2<f32>, lr: f32) -> Array2<f32> {
         let input = self.cached_input.as_ref().unwrap();
-        let q = input.dot(&self.w_q);
-        let k = input.dot(&self.w_k);
+        
+        // Forward pass through linear layers
+        let q_pre_rope = input.dot(&self.w_q);
+        let k_pre_rope = input.dot(&self.w_k);
         let v = input.dot(&self.w_v);
+        
+        // Apply RoPE to get q and k
+        let (q, k) = self.rope.apply_qk(&q_pre_rope, &k_pre_rope);
+        
         let dk = self.w_q.shape()[1] as f32;
         let scale = dk.sqrt();
 
@@ -148,33 +164,37 @@ impl Layer for SelfAttention {
             }
         }
 
-        let attn_weights = self.softmax(&scores); // also cached
+        let attn_weights = self.softmax(&scores);
 
-        // Step 1: grads = ∂L/∂attn_output
+        // Backward pass through attention
         let grad_attn_weights = grads.dot(&v.t());
         let grad_v = attn_weights.t().dot(grads);
 
-        // Step 2: softmax backward
-        let grad_scores = SelfAttention::softmax_backward(&attn_weights, &grad_attn_weights); // [seq_len, seq_len]
+        // Softmax backward
+        let grad_scores = SelfAttention::softmax_backward(&attn_weights, &grad_attn_weights);
 
-        // Step 3: ∂L/∂Q and ∂L/∂K
+        // Gradients w.r.t Q and K (after RoPE)
         let grad_q = grad_scores.dot(&k);
         let grad_k = grad_scores.t().dot(&q);
 
-        // Step 4: ∂L/∂W_q/W_k/W_v
-        let grad_w_q = input.t().dot(&grad_q);
-        let grad_w_k = input.t().dot(&grad_k);
+        // Backward through RoPE
+        let grad_q_pre_rope = self.rope.backward_rotation(&grad_q, seq_len);
+        let grad_k_pre_rope = self.rope.backward_rotation(&grad_k, seq_len);
+
+        // Gradients w.r.t weight matrices
+        let grad_w_q = input.t().dot(&grad_q_pre_rope);
+        let grad_w_k = input.t().dot(&grad_k_pre_rope);
         let grad_w_v = input.t().dot(&grad_v);
 
-        // Step 5: ∂L/∂input (gradient through attention computation)
-        let grad_input_attention =
-            grad_q.dot(&self.w_q.t()) + grad_k.dot(&self.w_k.t()) + grad_v.dot(&self.w_v.t());
+        // Gradient w.r.t input
+        let grad_input_attention = grad_q_pre_rope.dot(&self.w_q.t()) 
+            + grad_k_pre_rope.dot(&self.w_k.t()) 
+            + grad_v.dot(&self.w_v.t());
 
-        // Step 6: Add gradient from residual connection
-        // Forward: residual = attention + input, so gradient flows directly through
+        // Add gradient from residual connection
         let grad_input = grad_input_attention + grads;
 
-        // Step 7: update weights
+        // Update weights
         self.optimizer_w_q.step(&mut self.w_q, &grad_w_q, lr);
         self.optimizer_w_k.step(&mut self.w_k, &grad_w_k, lr);
         self.optimizer_w_v.step(&mut self.w_v, &grad_w_v, lr);

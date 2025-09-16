@@ -1,7 +1,7 @@
 //! The first step in the transformer pipeline. Transform all the input tokens
 //! into our embedding space. This is our word2vec and RoPE step.
 
-use ndarray::{s, Array2};
+use ndarray::{s, Array1, Array2};
 use rand::Rng;
 
 use crate::util::constants as consts;
@@ -51,5 +51,93 @@ impl Embed {
         let token_embeds = Self::get_token_embeddings(&self.token, token_ids);
         let position_embeds = Self::get_positional_embeddings(&self.position, token_ids.len());
         token_embeds + position_embeds
+    }
+}
+
+/// Rotary Position Embedding (RoPE) implementation
+pub struct RotaryEmbedding {
+    head_dim: usize,
+    inv_freq: Array1<f32>,
+}
+
+impl RotaryEmbedding {
+    pub fn new(head_dim: usize) -> Self {
+        assert!(head_dim % 2 == 0, "head_dim must be even for RoPE");
+        
+        let mut inv_freq = Array1::<f32>::zeros(head_dim / 2);
+        for i in 0..(head_dim / 2) {
+            let freq = 10000.0_f32.powf(-((2 * i) as f32) / head_dim as f32);
+            inv_freq[i] = freq;
+        }
+        
+        RotaryEmbedding { head_dim, inv_freq }
+    }
+    
+    fn compute_cos_sin(&self, seq_len: usize) -> (Array2<f32>, Array2<f32>) {
+        let mut cos = Array2::<f32>::zeros((seq_len, self.head_dim / 2));
+        let mut sin = Array2::<f32>::zeros((seq_len, self.head_dim / 2));
+        
+        for m in 0..seq_len {
+            for (i, &freq) in self.inv_freq.iter().enumerate() {
+                let angle = m as f32 * freq;
+                cos[[m, i]] = angle.cos();
+                sin[[m, i]] = angle.sin();
+            }
+        }
+        
+        (cos, sin)
+    }
+    
+    fn apply_rotation(&self, x: &Array2<f32>, cos: &Array2<f32>, sin: &Array2<f32>) -> Array2<f32> {
+        let (seq_len, head_dim) = x.dim();
+        assert_eq!(head_dim, self.head_dim);
+        
+        let mut output = Array2::<f32>::zeros((seq_len, head_dim));
+        
+        for t in 0..seq_len {
+            for i in 0..(head_dim / 2) {
+                let x_even = x[[t, 2 * i]];
+                let x_odd = x[[t, 2 * i + 1]];
+                let cos_val = cos[[t, i]];
+                let sin_val = sin[[t, i]];
+                
+                output[[t, 2 * i]] = x_even * cos_val - x_odd * sin_val;
+                output[[t, 2 * i + 1]] = x_even * sin_val + x_odd * cos_val;
+            }
+        }
+        
+        output
+    }
+    
+    pub fn apply_qk(&self, q: &Array2<f32>, k: &Array2<f32>) -> (Array2<f32>, Array2<f32>) {
+        let seq_len = q.shape()[0];
+        let (cos, sin) = self.compute_cos_sin(seq_len);
+        
+        let q_rot = self.apply_rotation(q, &cos, &sin);
+        let k_rot = self.apply_rotation(k, &cos, &sin);
+        
+        (q_rot, k_rot)
+    }
+    
+    /// Backward pass through RoPE rotation
+    /// Given gradients w.r.t rotated vectors, compute gradients w.r.t original vectors
+    pub fn backward_rotation(&self, grad_rotated: &Array2<f32>, seq_len: usize) -> Array2<f32> {
+        let (cos, sin) = self.compute_cos_sin(seq_len);
+        let mut grad_original = Array2::<f32>::zeros(grad_rotated.dim());
+        
+        for t in 0..seq_len {
+            for i in 0..(self.head_dim / 2) {
+                let grad_even = grad_rotated[[t, 2 * i]];
+                let grad_odd = grad_rotated[[t, 2 * i + 1]];
+                let cos_val = cos[[t, i]];
+                let sin_val = sin[[t, i]];
+                
+                // Inverse rotation: R^T = R(-θ)
+                grad_original[[t, 2 * i]] = grad_even * cos_val + grad_odd * sin_val;
+                grad_original[[t, 2 * i + 1]] = -grad_even * sin_val + grad_odd * cos_val;
+            }
+        }
+        
+        grad_original
     }
 }
