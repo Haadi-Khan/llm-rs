@@ -1,3 +1,4 @@
+use crate::layers::Layer;
 use crate::layers::{
     LayerType, embed::Embed, project::OutputProjection, transformer::TransformerBlock,
 };
@@ -8,7 +9,7 @@ use ndarray::{Array2, Axis};
 use std::cmp::Ordering;
 
 pub struct LLM {
-    pub vocab: Token,
+    pub vocab: Vocab,
     pub network: Vec<LayerType>,
 }
 
@@ -18,7 +19,7 @@ impl Default for LLM {
         let output_projection =
             OutputProjection::new(consts::EMBEDDING_DIM, Vocab::default_words().len());
         Self {
-            vocab: Token::default(),
+            vocab: Vocab::default(),
             network: vec![
                 LayerType::Embed(Embed::default()),
                 LayerType::TransformerBlock(transformer_block),
@@ -29,7 +30,7 @@ impl Default for LLM {
 }
 
 impl LLM {
-    pub fn new(vocab: Token, network: Vec<LayerType>) -> Self {
+    pub fn new(vocab: Vocab, network: Vec<LayerType>) -> Self {
         Self { vocab, network }
     }
 }
