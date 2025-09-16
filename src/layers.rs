@@ -20,11 +20,17 @@ use crate::layers::{
 };
 
 pub trait Layer {
+    /// Forward pass through the layer. Takes input data and returns the output.
     fn forward(&mut self, input: &Array2<f32>) -> Array2<f32>;
+    /// Backward pass through the layer. Takes gradients from the next layer and learning rate,
     fn backward(&mut self, grads: &Array2<f32>, lr: f32) -> Array2<f32>;
 }
 
 #[derive(Debug, Clone)]
+/// Enum to represent different types of layers in the transformer model.
+/// Each variant holds a boxed instance of the corresponding layer struct to reduce memory usage.
+///
+/// Extend this enum with new layers as needed.
 pub enum LayerType {
     SelfAttention(Box<SelfAttention>),
     FeedForward(Box<FeedForward>),

@@ -17,6 +17,11 @@ use crate::util::constants as consts;
 use std::f32;
 
 #[derive(Debug, Clone)]
+/// Self-Attention Layer with RoPE (a la RoFormer)
+///
+/// Currently single-headed, TODO: Extend to multi-head attention
+///
+/// Stores the weight matrices for qkv, RoPE instance, and optimizers
 pub struct SelfAttention {
     pub embed_dim: usize,
     #[allow(dead_code)]
@@ -40,6 +45,7 @@ impl Default for SelfAttention {
 }
 
 impl SelfAttention {
+    /// Create a new Self-Attention layer with given embedding dimension
     pub fn new(embedding_dim: usize) -> Self {
         let mut rng = rand::rng();
         let head_dim = embedding_dim; // For single-head attention, head_dim = embedding_dim
@@ -62,6 +68,7 @@ impl SelfAttention {
         }
     }
 
+    /// Compute Q, K, V matrices from input
     fn compute_qkv(&self, input: &Array2<f32>) -> (Array2<f32>, Array2<f32>, Array2<f32>) {
         let q = input.dot(&self.w_q);
         let k = input.dot(&self.w_k);
@@ -73,6 +80,7 @@ impl SelfAttention {
         (q_rope, k_rope, v)
     }
 
+    /// The attention mechanism,  (QK^T V) / sqrt(dk) with causal masking
     fn attention(&self, q: &Array2<f32>, k: &Array2<f32>, v: &Array2<f32>) -> Array2<f32> {
         let dk = (self.embed_dim as f32).sqrt();
 
@@ -91,6 +99,7 @@ impl SelfAttention {
         weights.dot(v)
     }
 
+    // Numerically stable softmax implementation
     fn softmax(&self, scores: &Array2<f32>) -> Array2<f32> {
         let mut result = scores.clone();
 
@@ -110,6 +119,7 @@ impl SelfAttention {
         result
     }
 
+    // Backward pass for softmax
     fn softmax_backward(softmax_output: &Array2<f32>, grad_output: &Array2<f32>) -> Array2<f32> {
         let mut grad_input = softmax_output.clone();
 
