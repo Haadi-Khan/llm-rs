@@ -1,13 +1,13 @@
 //! The attention mechanism with RoPE (Rotary Position Embedding).
 
 use crate::{embed::RotaryEmbedding, optim::Adam};
-use crate::transformer::Layer;
 use ndarray::Array2;
 use rand_distr::{Distribution, Normal};
 
 use crate::util::constants as consts;
 use std::f32;
 
+#[derive(Debug, Clone)]
 pub struct SelfAttention {
     pub embed_dim: usize,
     #[allow(dead_code)]
@@ -128,11 +128,7 @@ impl SelfAttention {
     }
 }
 
-impl Layer for SelfAttention {
-    fn layer_type(&self) -> crate::transformer::LayerType {
-        crate::transformer::LayerType::SelfAttention
-    }
-
+impl super::Layer for SelfAttention {
     fn forward(&mut self, input: &Array2<f32>) -> Array2<f32> {
         self.cached_input = Some(input.clone());
         let qkv = self.compute_qkv(input);

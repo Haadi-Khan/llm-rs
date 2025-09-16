@@ -3,6 +3,7 @@ use ndarray::Array2;
 /// Primary optimizer for training the LLM. I might try a different optimizer
 /// later (ik there's some better ones nowadays) but this is dead simple to impl
 /// lol
+#[derive(Debug, Clone)]
 pub struct Adam {
     beta1: f32,
     beta2: f32,

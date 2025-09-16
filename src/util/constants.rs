@@ -1,5 +1,6 @@
 pub const VOCAB_SIZE: usize = 50257;
 pub const EMBEDDING_DIM: usize = 768;
+pub const HIDDEN_DIM: usize = 3072;
 pub const MAX_SEQ_LEN: usize = 1024;
 pub const NUM_LAYERS: usize = 12;
 pub const NUM_HEADS: usize = 12;

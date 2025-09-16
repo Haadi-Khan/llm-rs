@@ -1,10 +1,8 @@
-pub mod attention;
 pub mod embed;
-pub mod ffn;
-pub mod layernorm;
-pub mod llm;
+pub mod layers;
+pub mod model;
 pub mod optim;
-pub mod transformer;
+pub mod token;
 pub mod util;
 
 fn main() {

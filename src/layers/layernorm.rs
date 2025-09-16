@@ -1,8 +1,8 @@
 use crate::optim::Adam;
-use crate::transformer::Layer;
 use ndarray::Array2;
 use ndarray::Axis;
 
+#[derive(Debug, Clone)]
 pub struct LayerNorm {
     epsilon: f32,
     gamma: Array2<f32>,
@@ -44,11 +44,7 @@ impl LayerNorm {
     }
 }
 
-impl Layer for LayerNorm {
-    fn layer_type(&self) -> crate::transformer::LayerType {
-        crate::transformer::LayerType::LayerNorm
-    }
-
+impl super::Layer for LayerNorm {
     fn forward(&mut self, input: &Array2<f32>) -> Array2<f32> {
         self.normalize(input)
     }

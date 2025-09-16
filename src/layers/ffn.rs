@@ -1,8 +1,9 @@
 use ndarray::Array2;
 use ndarray::Axis;
 use rand_distr::{Normal, Distribution};
-use crate::{optim::Adam, transformer::Layer};
+use crate::{optim::Adam};
 
+#[derive(Debug, Clone)]
 pub struct FeedForward {
     w1: Array2<f32>,
     b1: Array2<f32>,
@@ -48,11 +49,7 @@ impl FeedForward {
     }
 }
 
-impl Layer for FeedForward {
-    fn layer_type(&self) -> crate::transformer::LayerType {
-        crate::transformer::LayerType::FeedForward
-    }
-
+impl super::Layer for FeedForward {
     fn backward(&mut self, grads: &Array2<f32>, lr: f32) -> Array2<f32> {
         let input = self.input.as_ref().expect("forward must be run first");
         let hidden_pre_activation = self.hidden_pre_activation.as_ref().unwrap();

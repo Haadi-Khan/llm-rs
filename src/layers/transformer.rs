@@ -1,21 +1,7 @@
-use crate::attention::SelfAttention;
-use crate::ffn::FeedForward;
-use crate::layernorm::LayerNorm;
+use super::{attention::SelfAttention, ffn::FeedForward, layernorm::LayerNorm};
 use ndarray::Array2;
 
-pub enum LayerType {
-    SelfAttention,
-    FeedForward,
-    LayerNorm,
-    TransformerBlock,
-}
-
-pub trait Layer {
-    fn layer_type(&self) -> LayerType;
-    fn forward(&mut self, input: &Array2<f32>) -> Array2<f32>;
-    fn backward(&mut self, grads: &Array2<f32>, lr: f32) -> Array2<f32>;
-}
-
+#[derive(Debug, Clone)]
 pub struct TransformerBlock {
     attention: SelfAttention,
     feed_forward: FeedForward,
@@ -34,10 +20,7 @@ impl TransformerBlock {
     }
 }
 
-impl Layer for TransformerBlock {
-    fn layer_type(&self) -> LayerType {
-        LayerType::TransformerBlock
-    }
+impl super::Layer for TransformerBlock {
     fn forward(&mut self, input: &Array2<f32>) -> Array2<f32> {
         let attention_out = self.attention.forward(input);
         let norm1_out = self.norm1.normalize(&attention_out);
