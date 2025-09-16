@@ -14,6 +14,10 @@ use rand::Rng;
 use crate::{optim::Adam, token::Vocab, util::constants as consts};
 
 #[derive(Debug, Clone)]
+/// Embedding Layer with Token and Positional Embeddings
+///
+/// Stores token embeddings, positional embeddings, cached input for backpropagation,
+/// and optimizers for both embeddings.
 pub struct Embed {
     pub token: Array2<f32>,
     pub position: Array2<f32>,
@@ -35,11 +39,13 @@ impl Default for Embed {
 }
 
 impl Embed {
+    /// Initialize token embeddings with random values
     fn init_embeddings(vocab_size: usize, embedding_dim: usize) -> Array2<f32> {
         let mut rng = rand::rng();
         Array2::from_shape_fn((vocab_size, embedding_dim), |_| rng.random_range(-1.0..1.0))
     }
 
+    /// Initialize positional embeddings with random values
     fn init_positional_embeddings(max_seq_len: usize, embedding_dim: usize) -> Array2<f32> {
         let mut rng = rand::rng();
         Array2::from_shape_fn((max_seq_len, embedding_dim), |_| {
@@ -47,6 +53,7 @@ impl Embed {
         })
     }
 
+    /// Get token embeddings for given token IDs
     fn get_token_embeddings(embeddings: &Array2<f32>, token_ids: &[usize]) -> Array2<f32> {
         let mut token_embeds = Array2::<f32>::zeros((token_ids.len(), embeddings.ncols()));
         for (i, &token_id) in token_ids.iter().enumerate() {
@@ -55,6 +62,7 @@ impl Embed {
         token_embeds
     }
 
+    /// Get positional embeddings for given sequence length
     fn get_positional_embeddings(
         positional_encodings: &Array2<f32>,
         seq_len: usize,
@@ -62,6 +70,7 @@ impl Embed {
         positional_encodings.slice(s![0..seq_len, ..]).to_owned()
     }
 
+    /// Embed tokens by summing token and positional embeddings
     pub fn embed_tokens(&self, token_ids: &[usize]) -> Array2<f32> {
         println!("token_ids: {:?}", token_ids);
         let token_embeds = Self::get_token_embeddings(&self.token, token_ids);
@@ -119,14 +128,15 @@ impl super::Layer for Embed {
     }
 }
 
-/// Rotary Position Embedding (RoPE) implementation
 #[derive(Debug, Clone)]
+/// Rotary Position Embedding (RoPE) implementation
 pub struct RotaryEmbedding {
     head_dim: usize,
     inv_freq: Array1<f32>,
 }
 
 impl RotaryEmbedding {
+    /// Create a new RotaryEmbedding instance
     pub fn new(head_dim: usize) -> Self {
         assert!(head_dim % 2 == 0, "head_dim must be even for RoPE");
 
@@ -139,6 +149,7 @@ impl RotaryEmbedding {
         RotaryEmbedding { head_dim, inv_freq }
     }
 
+    /// Compute cosine and sine matrices for given sequence length
     fn compute_cos_sin(&self, seq_len: usize) -> (Array2<f32>, Array2<f32>) {
         let mut cos = Array2::<f32>::zeros((seq_len, self.head_dim / 2));
         let mut sin = Array2::<f32>::zeros((seq_len, self.head_dim / 2));
@@ -154,6 +165,18 @@ impl RotaryEmbedding {
         (cos, sin)
     }
 
+    /// Apply RoPE rotation to input vectors
+    /// x shape: (seq_len, head_dim)
+    /// cos, sin shape: (seq_len, head_dim/2)
+    ///
+    /// Returns rotated vectors of same shape as x
+    /// Uses the formula:
+    /// [ x_even * cos - x_odd * sin, x_even * sin + x_odd * cos ]
+    /// for each pair of even and odd dimensions
+    ///
+    /// This is equivalent to a 2D rotation in the plane of each pair of dimensions
+    /// where x_even = x[2i], x_odd = x[2i+1]
+    /// for i in 0..(head_dim/2)
     fn apply_rotation(&self, x: &Array2<f32>, cos: &Array2<f32>, sin: &Array2<f32>) -> Array2<f32> {
         let (seq_len, head_dim) = x.dim();
         assert_eq!(head_dim, self.head_dim);
@@ -175,6 +198,7 @@ impl RotaryEmbedding {
         output
     }
 
+    /// Apply RoPE to query and key matrices
     pub fn apply_qk(&self, q: &Array2<f32>, k: &Array2<f32>) -> (Array2<f32>, Array2<f32>) {
         let seq_len = q.shape()[0];
         let (cos, sin) = self.compute_cos_sin(seq_len);

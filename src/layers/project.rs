@@ -10,9 +10,13 @@ use rand_distr::{Distribution, Normal};
 use crate::optim::Adam;
 
 #[derive(Debug, Clone)]
+/// Output Projection Layer mapping embeddings to vocabulary logits
+///
+/// Stores weight matrix, bias vector, cached input for backpropagation,
+/// and optimizer for the weights.
 pub struct OutputProjection {
-    pub w_out: Array2<f32>, // Weight matrix
-    pub b_out: Array2<f32>, // Bias vector
+    pub w_out: Array2<f32>,
+    pub b_out: Array2<f32>,
     pub optimizer: Adam,
     pub cached_input: Option<Array2<f32>>,
 }
@@ -35,7 +39,6 @@ impl OutputProjection {
 }
 
 impl super::Layer for OutputProjection {
-    /// Forward pass: project embeddings to vocab logits
     fn forward(&mut self, input: &Array2<f32>) -> Array2<f32> {
         // input shape is [sequence_length, embedding_dim]
         self.cached_input = Some(input.clone());

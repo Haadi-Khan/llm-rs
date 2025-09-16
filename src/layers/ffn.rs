@@ -12,6 +12,10 @@ use ndarray::Axis;
 use rand_distr::{Distribution, Normal};
 
 #[derive(Debug, Clone)]
+/// FeedForward Layer with two linear transformations and ReLU activation
+///
+/// Stores weight matrices, biases, intermediate values for backpropagation, and optimizers
+/// for each parameter.
 pub struct FeedForward {
     w1: Array2<f32>,
     b1: Array2<f32>,
