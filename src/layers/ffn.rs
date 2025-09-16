@@ -1,7 +1,7 @@
+use crate::optim::Adam;
 use ndarray::Array2;
 use ndarray::Axis;
-use rand_distr::{Normal, Distribution};
-use crate::{optim::Adam};
+use rand_distr::{Distribution, Normal};
 
 #[derive(Debug, Clone)]
 pub struct FeedForward {
@@ -24,15 +24,15 @@ impl FeedForward {
     /// Initialize a feedforward layer with random weights
     pub fn new(embedding_dim: usize, hidden_dim: usize) -> Self {
         let mut rng = rand::rng();
-        
+
         // Xavier/He initialization for w1: std = sqrt(2 / fan_in)
         let std_w1 = (2.0 / embedding_dim as f32).sqrt();
         let normal_w1 = Normal::new(0.0, std_w1).unwrap();
-        
-        // Xavier/He initialization for w2: std = sqrt(2 / fan_in)  
+
+        // Xavier/He initialization for w2: std = sqrt(2 / fan_in)
         let std_w2 = (2.0 / hidden_dim as f32).sqrt();
         let normal_w2 = Normal::new(0.0, std_w2).unwrap();
-        
+
         FeedForward {
             w1: Array2::from_shape_fn((embedding_dim, hidden_dim), |_| normal_w1.sample(&mut rng)),
             b1: Array2::zeros((1, hidden_dim)), // Bias initialized to 0
@@ -64,10 +64,12 @@ impl super::Layer for FeedForward {
         let grad_hidden_pre_activation = grad_hidden_post_activation * relu_grad;
 
         let grad_w1 = input.t().dot(&grad_hidden_pre_activation);
-        let grad_b1 = grad_hidden_pre_activation.sum_axis(Axis(0)).insert_axis(Axis(0)); // Shape: [1, hidden_dim]
+        let grad_b1 = grad_hidden_pre_activation
+            .sum_axis(Axis(0))
+            .insert_axis(Axis(0)); // Shape: [1, hidden_dim]
 
         let grad_input_feedforward = grad_hidden_pre_activation.dot(&self.w1.t());
-        
+
         let grad_input = grad_input_feedforward + grads;
 
         self.optimizer_w2.step(&mut self.w2, &grad_w2, lr);
@@ -81,7 +83,7 @@ impl super::Layer for FeedForward {
     fn forward(&mut self, input: &Array2<f32>) -> Array2<f32> {
         let hidden_pre_activation = input.dot(&self.w1) + &self.b1;
         let hidden_post_activation = hidden_pre_activation.mapv(|x| x.max(0.0)); // ReLU
-        
+
         let output = hidden_post_activation.dot(&self.w2) + &self.b2;
 
         self.input = Some(input.clone());

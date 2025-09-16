@@ -1,7 +1,7 @@
 //! The attention mechanism with RoPE (Rotary Position Embedding).
 
-use crate::{optim::Adam};
 use super::embed::RotaryEmbedding;
+use crate::optim::Adam;
 use ndarray::Array2;
 use rand_distr::{Distribution, Normal};
 
@@ -58,10 +58,10 @@ impl SelfAttention {
         let q = input.dot(&self.w_q);
         let k = input.dot(&self.w_k);
         let v = input.dot(&self.w_v);
-        
+
         // Apply RoPE to Q and K
         let (q_rope, k_rope) = self.rope.apply_qk(&q, &k);
-        
+
         (q_rope, k_rope, v)
     }
 
@@ -139,15 +139,15 @@ impl super::Layer for SelfAttention {
 
     fn backward(&mut self, grads: &Array2<f32>, lr: f32) -> Array2<f32> {
         let input = self.cached_input.as_ref().unwrap();
-        
+
         // Forward pass through linear layers
         let q_pre_rope = input.dot(&self.w_q);
         let k_pre_rope = input.dot(&self.w_k);
         let v = input.dot(&self.w_v);
-        
+
         // Apply RoPE to get q and k
         let (q, k) = self.rope.apply_qk(&q_pre_rope, &k_pre_rope);
-        
+
         let dk = self.w_q.shape()[1] as f32;
         let scale = dk.sqrt();
 
@@ -184,8 +184,8 @@ impl super::Layer for SelfAttention {
         let grad_w_v = input.t().dot(&grad_v);
 
         // Gradient w.r.t input
-        let grad_input_attention = grad_q_pre_rope.dot(&self.w_q.t()) 
-            + grad_k_pre_rope.dot(&self.w_k.t()) 
+        let grad_input_attention = grad_q_pre_rope.dot(&self.w_q.t())
+            + grad_k_pre_rope.dot(&self.w_k.t())
             + grad_v.dot(&self.w_v.t());
 
         // Add gradient from residual connection

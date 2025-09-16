@@ -1,7 +1,5 @@
 use crate::layers::Layer;
-use crate::layers::{
-    LayerType, project::OutputProjection, transformer::TransformerBlock,
-};
+use crate::layers::{LayerType, project::OutputProjection, transformer::TransformerBlock};
 use crate::token::Vocab;
 use crate::util::constants as consts;
 use ndarray::Array1;
