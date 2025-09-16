@@ -10,6 +10,9 @@ use super::{attention::SelfAttention, ffn::FeedForward, layernorm::LayerNorm};
 use ndarray::Array2;
 
 #[derive(Debug, Clone)]
+/// Transformer Block consisting of Self-Attention and FeedForward layers with LayerNorm
+///
+/// Stores sub-layers and their parameters for backpropagation.
 pub struct TransformerBlock {
     attention: SelfAttention,
     feed_forward: FeedForward,
@@ -18,6 +21,7 @@ pub struct TransformerBlock {
 }
 
 impl TransformerBlock {
+    /// Initialize a Transformer block with specified dimensions
     pub fn new(embedding_dim: usize, hidden_dim: usize) -> Self {
         TransformerBlock {
             attention: SelfAttention::new(embedding_dim),

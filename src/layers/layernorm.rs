@@ -10,6 +10,10 @@ use ndarray::Array2;
 use ndarray::Axis;
 
 #[derive(Debug, Clone)]
+/// Layer Normalization Layer
+///
+/// Stores learnable parameters (gamma and beta), cached values for backpropagation,
+/// and optimizers for the parameters.
 pub struct LayerNorm {
     epsilon: f32,
     gamma: Array2<f32>,
@@ -38,6 +42,7 @@ impl LayerNorm {
         }
     }
 
+    /// Apply layer normalization to the input
     pub fn normalize(&mut self, input: &Array2<f32>) -> Array2<f32> {
         let mean = input.mean_axis(Axis(1)).unwrap().insert_axis(Axis(1));
         let std = input.std_axis(Axis(1), 0.0).insert_axis(Axis(1));
